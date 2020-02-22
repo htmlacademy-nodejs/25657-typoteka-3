@@ -1,7 +1,6 @@
 'use strict';
 
-const fs = require(`fs`);
-const util = require(`util`);
+const fs = require(`fs`).promises;
 const chalk = require(`chalk`);
 const {
   getRandomInt,
@@ -11,56 +10,6 @@ const {
 const FILE_NAME = `mock.json`;
 const MAXIMUM_NUMBER_ANNOUNCEMENTS = 5;
 const MAXIMUM_NUMBER_MONTHS = 3;
-
-const TITLES = [
-  `Ёлки. История деревьев`,
-  `Как перестать беспокоиться и начать жить`,
-  `Как достигнуть успеха не вставая с кресла`,
-  `Обзор новейшего смартфона`,
-  `Лучше рок-музыканты 20-века`,
-  `Как начать программировать`,
-  `Учим HTML и CSS`,
-  `Что такое золотое сечение`,
-  `Как собрать камни бесконечности`,
-  `Борьба с прокрастинацией`,
-  `Рок — это протест`,
-  `Самый лучший музыкальный альбом этого года`,
-];
-
-const ANNOUNCEMENTS = [
-  `Ёлки — это не просто красивое дерево. Это прочная древесина.`,
-  `Первая большая ёлка была установлена только в 1938 году.`,
-  `Вы можете достичь всего. Стоит только немного постараться и запастись книгами.`,
-  `Этот смартфон — настоящая находка. Большой и яркий экран, мощнейший процессор — всё это в небольшом гаджете.`,
-  `Золотое сечение — соотношение двух величин, гармоническая пропорция.`,
-  `Собрать камни бесконечности легко, если вы прирожденный герой.`,
-  `Освоить вёрстку несложно. Возьмите книгу новую книгу и закрепите все упражнения на практике.`,
-  `Бороться с прокрастинацией несложно. Просто действуйте. Маленькими шагами.`,
-  `Программировать не настолько сложно, как об этом говорят.`,
-  `Простые ежедневные упражнения помогут достичь успеха.`,
-  `Это один из лучших рок-музыкантов.`,
-  `Он написал больше 30 хитов.`,
-  `Из под его пера вышло 8 платиновых альбомов.`,
-  `Процессор заслуживает особого внимания. Он обязательно понравится геймерам со стажем.`,
-  `Рок-музыка всегда ассоциировалась с протестами. Так ли это на самом деле?`,
-  `Достичь успеха помогут ежедневные повторения.`,
-  `Помните, небольшое количество ежедневных упражнений лучше, чем один раз, но много.`,
-  `Как начать действовать? Для начала просто соберитесь.`,
-  `Игры и программирование разные вещи. Не стоит идти в программисты, если вам нравится только игры.`,
-  `Альбом стал настоящим открытием года. Мощные гитарные рифы и скоростные соло-партии не дадут заскучать.`,
-];
-
-const CATEGORIES = [
-  `Деревья`,
-  `За жизнь`,
-  `Без рамки`,
-  `Разное`,
-  `IT`,
-  `Музыка`,
-  `Кино`,
-  `Программирование`,
-  `Железо`,
-];
 
 const MockElements = {
   min: 1,
@@ -73,15 +22,26 @@ const getPreviousDate = (months) => {
   return new Date(date);
 };
 
-const generateOffers = (count) => (
-  Array(count).fill({}).map(() => ({
-    title: TITLES[getRandomInt(0, TITLES.length - 1)],
+const readFileInfo = async (fileName) => {
+  try {
+    return (await fs.readFile(fileName, `utf-8`)).split(/\n/).filter(str => str !== '');
+  } catch (error) {
+    return console.error(chalk.red(`Can't read file ${fileName}`));
+  }
+};
+
+const generateOffers = async (count) => {
+  const titles = await readFileInfo('data/titles.txt');
+  const announcements = await readFileInfo('data/announcements.txt');
+  const categories = await readFileInfo('data/categories.txt');
+  return Array(count).fill({}).map(() => ({
+    title: titles[getRandomInt(0, titles.length - 1)],
     createdDate: new Date(getRandomInt(getPreviousDate(MAXIMUM_NUMBER_MONTHS), Date.now())),
-    announce: shuffle(ANNOUNCEMENTS).slice(0, getRandomInt(1, MAXIMUM_NUMBER_ANNOUNCEMENTS)).join(` `),
-    fullText: shuffle(ANNOUNCEMENTS).slice(0, getRandomInt(1, ANNOUNCEMENTS.length - 1)).join(` `),
-    category: shuffle(CATEGORIES).slice(0, getRandomInt(1, CATEGORIES.length - 1)),
-  }))
-);
+    announce: shuffle(announcements).slice(0, getRandomInt(1, MAXIMUM_NUMBER_ANNOUNCEMENTS)).join(` `),
+    fullText: shuffle(announcements).slice(0, getRandomInt(1, announcements.length - 1)).join(` `),
+    category: shuffle(categories).slice(0, getRandomInt(1, categories.length - 1)),
+  }));
+};
 
 module.exports = {
   name: `--generate`,
@@ -91,11 +51,10 @@ module.exports = {
     if (countOffer > MockElements.max) {
       return console.info(`Не больше 1000 публикаций`);
     }
-    const content = JSON.stringify(generateOffers(countOffer));
-    const writeFile = util.promisify(fs.writeFile);
+    const content = JSON.stringify(await generateOffers(countOffer));
 
     try {
-      await writeFile(FILE_NAME, content);
+      await fs.writeFile(FILE_NAME, content);
       return console.info(chalk.green(`Operation success. File created.`));
     } catch (error) {
       return console.error(chalk.red(`Can't write data to file...`));
