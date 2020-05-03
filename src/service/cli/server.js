@@ -2,7 +2,6 @@
 
 const express = require(`express`);
 /** @member {Object} */
-const chalk = require(`chalk`);
 const fs = require(`fs`).promises;
 
 const DEFAULT_PORT = 3000;
@@ -25,13 +24,13 @@ module.exports = {
     const app = express();
     app.use(express.json());
 
-    app.get(`/offers`, async (req, res) => {
+    app.get(`/posts`, async (req, res) => {
       try {
         const fileContent = await fs.readFile(FILENAME, `utf-8`);
         const mocks = JSON.parse(fileContent);
         res.json(mocks);
       } catch (err) {
-        res.status(HttpCode.INTERNAL_SERVER_ERROR).send(err);
+        res.json([]);
       }
     });
 
