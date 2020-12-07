@@ -1,11 +1,11 @@
 'use strict';
 
 const express = require(`express`);
-/** @member {Object} */
-const fs = require(`fs`).promises;
+const { getMockData } = require(`../lib/get-mock-data`);
+const routes = require(`../api`);
 
 const DEFAULT_PORT = 3000;
-const FILENAME = `mock.json`;
+const API_PREFIX = `/api`;
 
 const HttpCode = {
   OK: 200,
@@ -23,11 +23,11 @@ module.exports = {
 
     const app = express();
     app.use(express.json());
+    app.use(API_PREFIX, routes);
 
     app.get(`/posts`, async (req, res) => {
       try {
-        const fileContent = await fs.readFile(FILENAME, `utf-8`);
-        const mocks = JSON.parse(fileContent);
+        const mocks = await getMockData();
         res.json(mocks);
       } catch (err) {
         res.json([]);
